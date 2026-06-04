@@ -223,27 +223,36 @@ function DraftScreen({ onDone, accent, dataError }) {
   const showPickList = (phase === 'loading' || phase === 'choosing') && team != null && year != null;
 
   return (
-    <div style={{ ...sx.page, paddingBottom: 14 }}>
-      {/* progress */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Mono style={{ color: 'var(--accent)' }}>The Draft</Mono>
-        <Mono>{filled} / {SLOTS.length} locked</Mono>
-      </div>
-      <div style={{ display: 'flex', gap: 5, marginTop: 9 }}>
-        {SLOTS.map(s => {
-          const sel = squad[s.key];
-          return (
-            <div key={s.key} style={{
-              flex: 1, height: 30, borderRadius: 7, display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center', gap: 1,
-              background: sel ? 'var(--surface)' : 'transparent',
-              border: `1px ${sel ? 'solid' : 'dashed'} ${sel ? tcol(sel.ovr) : 'var(--line)'}`,
-            }}>
-              <span style={{ fontFamily: '"IBM Plex Mono",monospace', fontSize: 8, color: sel ? tcol(sel.ovr) : 'var(--muted)', letterSpacing: 0.5 }}>{s.label}</span>
-              {sel && <span style={{ fontFamily: '"Saira Condensed",sans-serif', fontWeight: 800, fontSize: 12, color: 'var(--txt)', lineHeight: 1 }}>{sel.ovr}</span>}
-            </div>
-          );
-        })}
+    <div style={{
+      ...sx.page,
+      paddingBottom: 14,
+      overflow: showPickList ? 'hidden' : 'auto',
+    }}>
+      {/* progress — stays fixed while player list scrolls */}
+      <div style={{
+        flexShrink: 0,
+        ...(showPickList ? sx.draftStickyHead : null),
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Mono style={{ color: 'var(--accent)' }}>The Draft</Mono>
+          <Mono>{filled} / {SLOTS.length} locked</Mono>
+        </div>
+        <div style={{ display: 'flex', gap: 5, marginTop: 9 }}>
+          {SLOTS.map(s => {
+            const sel = squad[s.key];
+            return (
+              <div key={s.key} style={{
+                flex: 1, height: 30, borderRadius: 7, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 1,
+                background: sel ? 'var(--surface)' : 'transparent',
+                border: `1px ${sel ? 'solid' : 'dashed'} ${sel ? tcol(sel.ovr) : 'var(--line)'}`,
+              }}>
+                <span style={{ fontFamily: '"IBM Plex Mono",monospace', fontSize: 8, color: sel ? tcol(sel.ovr) : 'var(--muted)', letterSpacing: 0.5 }}>{s.label}</span>
+                {sel && <span style={{ fontFamily: '"Saira Condensed",sans-serif', fontWeight: 800, fontSize: 12, color: 'var(--txt)', lineHeight: 1 }}>{sel.ovr}</span>}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {!showPickList ? (
@@ -270,8 +279,8 @@ function DraftScreen({ onDone, accent, dataError }) {
           </Btn>
         </div>
       ) : (
-        // ── result banner + shortlist ──
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        // ── team banner (fixed) + scrollable shortlist ──
+        <div style={sx.draftPickPane}>
           <div style={{ ...sx.banner, borderColor: team?.color || 'var(--line)' }}>
             {team && <TeamBadge team={team} size={42} />}
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -283,7 +292,7 @@ function DraftScreen({ onDone, accent, dataError }) {
             <div style={{ fontFamily: '"Saira Condensed",sans-serif', fontWeight: 800, fontSize: 30, color: 'var(--accent)' }}>{String(year).slice(2)}</div>
           </div>
 
-          <div style={{ flex: 1, overflow: 'auto', marginTop: 10, marginRight: -4, paddingRight: 4 }}>
+          <div style={sx.draftPlayerScroll}>
             {phase === 'loading'
               ? [0, 1, 2, 3].map(i => <div key={i} style={{ ...sx.skel, animationDelay: `${i * 0.1}s` }} />)
               : fetchError
@@ -295,7 +304,7 @@ function DraftScreen({ onDone, accent, dataError }) {
           </div>
 
           {skipsLeft > 0 && (
-            <div style={{ marginTop: 10 }}>
+            <div style={{ flexShrink: 0, marginTop: 10 }}>
               <Btn ghost onClick={skipSpin}>↺ Skip · Spin Again (1 left)</Btn>
             </div>
           )}
@@ -698,6 +707,30 @@ function Confetti() {
 
 const sx = {
   page: { flex: 1, minHeight: 0, boxSizing: 'border-box', padding: '28px clamp(16px, 4vw, 32px) 32px', display: 'flex', flexDirection: 'column', overflow: 'auto' },
+  draftStickyHead: {
+    position: 'sticky',
+    top: 0,
+    zIndex: 5,
+    background: 'var(--bg)',
+    paddingBottom: 4,
+    boxShadow: '0 10px 18px -14px rgba(0,0,0,0.85)',
+  },
+  draftPickPane: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: 0,
+    marginTop: 16,
+    gap: 14,
+  },
+  draftPlayerScroll: {
+    flex: 1,
+    minHeight: 0,
+    overflowY: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    paddingRight: 4,
+    marginRight: -4,
+  },
   statCard: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: '11px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center' },
   banner: { display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: 'var(--surface)', border: '1.5px solid', borderRadius: 14 },
   odds: { background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 14, padding: '12px 15px', marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
