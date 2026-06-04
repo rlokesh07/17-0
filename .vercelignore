@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.git/
+requirements.txt
+*.py
+sample/
+data/players.json
+data/players.csv
+data/rosters.json
+data/rosters.csv
