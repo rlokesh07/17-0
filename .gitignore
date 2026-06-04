@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.Dist/
+.env
+.env.*
+.vercel
+
+# Large nflverse dumps — run fetch_nfl_players.py locally, then build_spinner_index.py
+data/players.json
+data/players.csv
+data/rosters.json
+data/rosters.csv
