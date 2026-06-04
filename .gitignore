@@ -8,6 +8,8 @@ __pycache__/
 .env.*
 .vercel
 
+node_modules/
+
 # Large nflverse dumps — run fetch_nfl_players.py locally, then build_spinner_index.py
 data/players.json
 data/players.csv
