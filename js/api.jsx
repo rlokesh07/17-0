@@ -7,7 +7,7 @@ let _validDraftPicks = null;
 async function loadSpinnerIndex() {
   if (_indexCache) return _indexCache;
   if (!_indexPromise) {
-    _indexPromise = fetch("data/spinner-index.json")
+    _indexPromise = fetch("/data/spinner-index.json")
       .then((res) => {
         if (!res.ok) throw new Error(`spinner-index HTTP ${res.status}`);
         return res.json();
