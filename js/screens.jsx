@@ -817,7 +817,7 @@ function SharePageScreen({ shareId, onPlay }) {
     );
   }
 
-  const { wins, losses, perfect, squad, rt, games } = data;
+  const { wins, losses, perfect, squad } = data;
   const headline = perfect
     ? '🏆 17–0 · Immortal'
     : (data.message || verdict(wins));
@@ -832,15 +832,6 @@ function SharePageScreen({ shareId, onPlay }) {
         <div style={{ fontFamily: '"Saira Condensed",sans-serif', fontWeight: 600, fontSize: 17, marginTop: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
           {headline}
         </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-        {[['OVR', rt.ovr, 'var(--accent)'], ['OFF', rt.off, '#38bdf8'], ['DEF', rt.def, '#fb7185']].map(([l, v, c]) => (
-          <div key={l} style={{ ...sx.statCard, flex: 1, alignItems: 'flex-start' }}>
-            <Mono>{l}</Mono>
-            <div style={{ fontFamily: '"Saira Condensed",sans-serif', fontWeight: 800, fontSize: 36, lineHeight: 1, color: c, marginTop: 2 }}>{v}</div>
-          </div>
-        ))}
       </div>
 
       <Mono style={{ marginTop: 14 }}>Roster</Mono>
@@ -872,36 +863,6 @@ function SharePageScreen({ shareId, onPlay }) {
           );
         })}
       </div>
-
-      {games?.length > 0 && (
-        <>
-          <Mono style={{ marginTop: 12 }}>Season</Mono>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6, marginTop: 8 }}>
-            {games.map((g) => (
-              <div
-                key={g.wk}
-                style={{
-                  aspectRatio: '1',
-                  borderRadius: 9,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: g.win ? 'rgba(255,122,61,0.14)' : 'rgba(251,113,133,0.12)',
-                  border: `1px solid ${g.win ? 'rgba(255,122,61,0.45)' : 'rgba(251,113,133,0.4)'}`,
-                }}
-              >
-                <div style={{ fontFamily: '"Saira Condensed",sans-serif', fontWeight: 800, fontSize: 18, color: g.win ? 'var(--accent)' : '#fb7185', lineHeight: 1 }}>
-                  {g.win ? 'W' : 'L'}
-                </div>
-                <div style={{ fontFamily: '"IBM Plex Mono",monospace', fontSize: 9, color: 'var(--muted)', marginTop: 2 }}>
-                  {g.abbr}
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
 
       <Btn primary onClick={onPlay} style={{ marginTop: 14 }}>
         Build your squad →
