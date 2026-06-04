@@ -24,6 +24,9 @@ function AppShell({ children }) {
 }
 
 function App() {
+  const shareIdFromPath =
+    typeof getShareIdFromPath === "function" ? getShareIdFromPath() : null;
+  const [routeShareId, setRouteShareId] = React.useState(shareIdFromPath);
   const [stage, setStage] = React.useState("intro");
   const [squad, setSquad] = React.useState(null);
   const [season, setSeason] = React.useState(null);
@@ -31,6 +34,17 @@ function App() {
   const [dataError, setDataError] = React.useState(null);
 
   React.useEffect(() => {
+    const onPop = () => {
+      setRouteShareId(
+        typeof getShareIdFromPath === "function" ? getShareIdFromPath() : null
+      );
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  React.useEffect(() => {
+    if (routeShareId) return;
     if (typeof loadSpinnerIndex !== "function") {
       setDataError("Player data module failed to load.");
       return;
@@ -45,9 +59,13 @@ function App() {
           "Could not load data/spinner-index.json — run a local server and build_spinner_index.py."
         );
       });
-  }, []);
+  }, [routeShareId]);
 
   function startDraft() {
+    if (routeShareId) {
+      window.history.pushState({}, "", "/");
+      setRouteShareId(null);
+    }
     setSquad(null);
     setSeason(null);
     setStage("draft");
@@ -61,6 +79,14 @@ function App() {
     setSquad(s);
     setSeason(simSeason(s, SIM_OPTS));
     setStage("sim");
+  }
+
+  if (routeShareId) {
+    return (
+      <AppShell>
+        <SharePageScreen shareId={routeShareId} onPlay={startDraft} />
+      </AppShell>
+    );
   }
 
   let screen;

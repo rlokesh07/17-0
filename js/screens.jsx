@@ -530,6 +530,8 @@ function GlobalStatsPanel({ season, globalStats }) {
 function ResultScreen({ season, onRestart }) {
   const { wins, losses, perfect } = season;
   const [globalStats, setGlobalStats] = React.useState(null);
+  const [shareUrl, setShareUrl] = React.useState(null);
+  const [shareLoading, setShareLoading] = React.useState(true);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -541,6 +543,25 @@ function ResultScreen({ season, onRestart }) {
             ? await fetchGlobalStats()
             : null;
       if (!cancelled) setGlobalStats(stats);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [season.recordId]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setShareLoading(true);
+    setShareUrl(null);
+    (async () => {
+      const link =
+        typeof createSeasonShare === "function"
+          ? await createSeasonShare(season)
+          : null;
+      if (!cancelled) {
+        setShareUrl(link?.url || null);
+        setShareLoading(false);
+      }
     })();
     return () => {
       cancelled = true;
@@ -565,7 +586,7 @@ function ResultScreen({ season, onRestart }) {
         ))}
       </div>
       <div style={{ flex: 1 }} />
-      <ShareScorePanel season={season} />
+      <ShareScorePanel season={season} shareUrl={shareUrl} shareLoading={shareLoading} />
       <GlobalStatsPanel season={season} globalStats={globalStats} />
       {season.strengthPercentile != null && (
         <Mono style={{ marginTop: 10, color: 'var(--muted)', fontSize: 10 }}>
@@ -583,11 +604,12 @@ function verdict(w) {
   if (w >= 6) return 'Rebuilding';
   return 'Top Draft Pick';
 }
-function ShareBtn({ children, onClick, style, label }) {
+function ShareBtn({ children, onClick, style, label, disabled }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       aria-label={label}
       title={label}
       style={{
@@ -595,7 +617,8 @@ function ShareBtn({ children, onClick, style, label }) {
         border: '1.5px solid var(--line)',
         borderRadius: 12,
         padding: '12px 10px',
-        cursor: 'pointer',
+        cursor: disabled ? 'default' : 'pointer',
+        opacity: disabled ? 0.45 : 1,
         background: 'var(--surface)',
         color: 'var(--txt)',
         fontFamily: '"Saira Condensed",sans-serif',
@@ -634,9 +657,10 @@ function FacebookIcon({ size = 22 }) {
   );
 }
 
-function ShareScorePanel({ season }) {
+function ShareScorePanel({ season, shareUrl, shareLoading }) {
   const [status, setStatus] = useState(null);
   const canNative = typeof navigator !== 'undefined' && !!navigator.share;
+  const ready = !!shareUrl && !shareLoading;
 
   useEffect(() => {
     if (!status) return undefined;
@@ -645,45 +669,243 @@ function ShareScorePanel({ season }) {
   }, [status]);
 
   async function runShare(fn) {
-    const res = await fn(season);
+    if (!ready) return;
+    const res = await fn(season, shareUrl);
     if (res?.cancelled) return;
-    if (res?.ok) setStatus(res.method === 'copy' ? 'Copied to clipboard!' : 'Shared!');
+    if (res?.ok) setStatus(res.method === 'copy' ? 'Copied link!' : 'Shared!');
     else setStatus('Could not share — try Copy');
+  }
+
+  async function copyLink() {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setStatus('Link copied!');
+    } catch {
+      setStatus('Could not copy link');
+    }
   }
 
   return (
     <div style={{ marginTop: 14 }}>
-      <Mono style={{ marginBottom: 8 }}>Share your score</Mono>
+      <Mono style={{ marginBottom: 8 }}>Share your squad</Mono>
+      {shareLoading && (
+        <Mono style={{ marginBottom: 8, fontSize: 10 }}>Creating share link…</Mono>
+      )}
+      {!shareLoading && !shareUrl && (
+        <Mono style={{ marginBottom: 8, fontSize: 10, color: '#fb7185' }}>
+          Share link unavailable (storage not configured).
+        </Mono>
+      )}
+      {ready && (
+        <div
+          style={{
+            marginBottom: 8,
+            padding: '10px 12px',
+            borderRadius: 10,
+            border: '1px solid var(--line)',
+            background: 'var(--surface)',
+            fontFamily: '"IBM Plex Mono",monospace',
+            fontSize: 10,
+            color: 'var(--muted)',
+            wordBreak: 'break-all',
+            lineHeight: 1.4,
+          }}
+        >
+          {shareUrl}
+        </div>
+      )}
       <Btn
         primary
+        disabled={!ready}
         onClick={() => runShare(canNative ? shareScoreNative : copyShareText)}
         style={{ marginBottom: 8 }}
       >
-        {canNative ? 'Share →' : 'Copy score →'}
+        {canNative ? 'Share link →' : 'Copy share text →'}
       </Btn>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-        <ShareBtn onClick={() => shareToX(season)} label="Share on X">𝕏</ShareBtn>
+        <ShareBtn disabled={!ready} onClick={() => shareToX(season, shareUrl)} label="Share on X">𝕏</ShareBtn>
         <ShareBtn
-          onClick={() => shareToWhatsApp(season)}
+          disabled={!ready}
+          onClick={() => shareToWhatsApp(season, shareUrl)}
           label="Share on WhatsApp"
           style={{ background: '#25D366', borderColor: '#25D366', color: '#fff' }}
         >
           <WhatsAppIcon size={24} />
         </ShareBtn>
         <ShareBtn
-          onClick={() => shareToFacebook(season)}
+          disabled={!ready}
+          onClick={() => shareToFacebook(season, shareUrl)}
           label="Share on Facebook"
           style={{ background: '#1877F2', borderColor: '#1877F2', color: '#fff' }}
         >
           <FacebookIcon size={24} />
         </ShareBtn>
-        <ShareBtn onClick={() => runShare(copyShareText)} label="Copy score">Copy</ShareBtn>
+        <ShareBtn disabled={!ready} onClick={() => runShare(copyShareText)} label="Copy share text">Copy</ShareBtn>
       </div>
+      {ready && (
+        <Btn ghost onClick={copyLink} style={{ marginTop: 8, fontSize: 16, padding: '12px 16px' }}>
+          Copy link only
+        </Btn>
+      )}
       {status && (
         <Mono style={{ marginTop: 10, color: 'var(--accent)', textAlign: 'center', fontSize: 10 }}>
           {status}
         </Mono>
       )}
+    </div>
+  );
+}
+
+// ── SHARE PAGE (/share/:id) ───────────────────────────────────
+function SharePageScreen({ shareId, onPlay }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(false);
+    (async () => {
+      await (typeof loadSpinnerIndex === 'function' ? loadSpinnerIndex() : Promise.resolve());
+      const payload =
+        typeof fetchSeasonShare === 'function'
+          ? await fetchSeasonShare(shareId)
+          : null;
+      if (cancelled) return;
+      if (!payload) {
+        setError(true);
+        setData(null);
+      } else {
+        setData(payload);
+        const title = payload.perfect
+          ? '17–0 squad · Can you go 17-0?'
+          : `${payload.wins}–${payload.losses} squad · Can you go 17-0?`;
+        document.title = title;
+      }
+      setLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+      document.title = 'Can you go 17-0?';
+    };
+  }, [shareId]);
+
+  if (loading) {
+    return (
+      <div style={{ ...sx.page, justifyContent: 'center', alignItems: 'center' }}>
+        <Mono>Loading squad…</Mono>
+      </div>
+    );
+  }
+
+  if (error || !data?.squad) {
+    return (
+      <div style={{ ...sx.page, justifyContent: 'space-between' }}>
+        <div>
+          <Mono style={{ color: '#fb7185' }}>Share not found</Mono>
+          <div style={{ fontFamily: '"Saira Condensed",sans-serif', fontWeight: 800, fontSize: 28, marginTop: 8, color: 'var(--txt)' }}>
+            This link may have expired
+          </div>
+          <p style={{ fontFamily: '"Saira",sans-serif', color: 'var(--muted)', marginTop: 12, lineHeight: 1.5 }}>
+            Shared squads are kept for 90 days. Start a new run and share again.
+          </p>
+        </div>
+        <Btn primary onClick={onPlay}>Play →</Btn>
+      </div>
+    );
+  }
+
+  const { wins, losses, perfect, squad, rt, games } = data;
+  const headline = perfect
+    ? '🏆 17–0 · Immortal'
+    : (data.message || verdict(wins));
+
+  return (
+    <div style={{ ...sx.page, paddingBottom: 12 }}>
+      <Mono style={{ color: 'var(--accent)' }}>Shared squad</Mono>
+      <div style={{ textAlign: 'center', marginTop: 4 }}>
+        <div style={{ fontFamily: '"Saira Condensed",sans-serif', fontWeight: 800, fontSize: 72, lineHeight: 0.9, color: perfect ? 'var(--accent)' : 'var(--txt)' }}>
+          {wins}<span style={{ color: 'var(--muted)' }}>–</span>{losses}
+        </div>
+        <div style={{ fontFamily: '"Saira Condensed",sans-serif', fontWeight: 600, fontSize: 17, marginTop: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
+          {headline}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+        {[['OVR', rt.ovr, 'var(--accent)'], ['OFF', rt.off, '#38bdf8'], ['DEF', rt.def, '#fb7185']].map(([l, v, c]) => (
+          <div key={l} style={{ ...sx.statCard, flex: 1, alignItems: 'flex-start' }}>
+            <Mono>{l}</Mono>
+            <div style={{ fontFamily: '"Saira Condensed",sans-serif', fontWeight: 800, fontSize: 36, lineHeight: 1, color: c, marginTop: 2 }}>{v}</div>
+          </div>
+        ))}
+      </div>
+
+      <Mono style={{ marginTop: 14 }}>Roster</Mono>
+      <div style={{ flex: 1, overflow: 'auto', marginTop: 8, marginRight: -4, paddingRight: 4 }}>
+        {SLOTS.map((s) => {
+          const p = squad[s.key];
+          if (!p) return null;
+          const t = p.fromTeam;
+          return (
+            <div key={s.key} style={sx.row}>
+              <div style={{ width: 30 }}>
+                <Mono style={{ color: s.side === 'OFF' ? '#38bdf8' : '#fb7185', fontSize: 11 }}>{s.label}</Mono>
+              </div>
+              <Avatar player={p} size={38} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: '"Saira Condensed",sans-serif', fontWeight: 700, fontSize: 17, color: 'var(--txt)', lineHeight: 1.05, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {p.name}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                  <span style={{ fontFamily: '"IBM Plex Mono",monospace', fontSize: 10.5, color: 'var(--muted)' }}>
+                    {t ? `${t.name} ’${String(p.fromYear).slice(2)}` : ''} · {p.pos}
+                  </span>
+                </div>
+              </div>
+              <div style={{ fontFamily: '"Saira Condensed",sans-serif', fontWeight: 800, fontSize: 24, color: tcol(p.ovr), minWidth: 30, textAlign: 'right' }}>
+                {p.ovr}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {games?.length > 0 && (
+        <>
+          <Mono style={{ marginTop: 12 }}>Season</Mono>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6, marginTop: 8 }}>
+            {games.map((g) => (
+              <div
+                key={g.wk}
+                style={{
+                  aspectRatio: '1',
+                  borderRadius: 9,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: g.win ? 'rgba(255,122,61,0.14)' : 'rgba(251,113,133,0.12)',
+                  border: `1px solid ${g.win ? 'rgba(255,122,61,0.45)' : 'rgba(251,113,133,0.4)'}`,
+                }}
+              >
+                <div style={{ fontFamily: '"Saira Condensed",sans-serif', fontWeight: 800, fontSize: 18, color: g.win ? 'var(--accent)' : '#fb7185', lineHeight: 1 }}>
+                  {g.win ? 'W' : 'L'}
+                </div>
+                <div style={{ fontFamily: '"IBM Plex Mono",monospace', fontSize: 9, color: 'var(--muted)', marginTop: 2 }}>
+                  {g.abbr}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <Btn primary onClick={onPlay} style={{ marginTop: 14 }}>
+        Build your squad →
+      </Btn>
     </div>
   );
 }
@@ -731,4 +953,4 @@ const sx = {
   skel: { height: 62, borderRadius: 13, marginBottom: 8, background: 'linear-gradient(90deg,#131c26,#1a2532,#131c26)', backgroundSize: '200% 100%', animation: 'shimmer 1.1s linear infinite' },
 };
 
-Object.assign(window, { IntroScreen, DraftScreen, SquadScreen, SimScreen, ResultScreen });
+Object.assign(window, { IntroScreen, DraftScreen, SquadScreen, SimScreen, ResultScreen, SharePageScreen });

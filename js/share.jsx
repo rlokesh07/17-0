@@ -1,25 +1,6 @@
 // share.jsx — build share text and open social / native share for season results.
 
-function gameUrl() {
-  if (typeof window === 'undefined') return '';
-  return window.location.href.split('#')[0].split('?')[0];
-}
-
-function formatSquadForShare(squad) {
-  if (!squad || !SLOTS) return [];
-  return SLOTS.map((slot) => {
-    const p = squad[slot.key];
-    if (!p) return null;
-    const t = p.fromTeam;
-    const year =
-      p.fromYear != null ? `'${String(p.fromYear).slice(-2)}` : '';
-    const origin = t ? `${t.abbr.toUpperCase()}${year ? ` ${year}` : ''}` : '';
-    const meta = [origin, p.pos].filter(Boolean).join(' · ');
-    return `${slot.label} ${p.name}${meta ? ` · ${meta}` : ''} · ${p.ovr}`;
-  }).filter(Boolean);
-}
-
-function buildSharePayload(season) {
+function buildSharePayload(season, shareUrl) {
   const { wins, losses, perfect } = season;
   const record = `${wins}–${losses}`;
   const headline = perfect
@@ -29,14 +10,10 @@ function buildSharePayload(season) {
   const lines = [
     `Can you go 17-0? I finished ${record}.`,
     headline,
+    'See my squad:',
   ];
 
-  const roster = formatSquadForShare(season.squad);
-  if (roster.length) {
-    lines.push('', 'My squad:', ...roster);
-  }
-
-  const url = gameUrl();
+  const url = shareUrl || '';
   const text = lines.join('\n');
   const title = perfect ? '17–0 · Can you go 17-0?' : `${record} · Can you go 17-0?`;
   const fullText = url ? `${text}\n\n${url}` : text;
@@ -48,34 +25,34 @@ function openPopup(url) {
   window.open(url, '_blank', 'noopener,noreferrer,width=600,height=520');
 }
 
-function shareToX(season) {
-  const { fullText } = buildSharePayload(season);
+function shareToX(season, shareUrl) {
+  const { fullText } = buildSharePayload(season, shareUrl);
   openPopup(`https://twitter.com/intent/tweet?text=${encodeURIComponent(fullText)}`);
 }
 
-function shareToFacebook(season) {
-  const { url, text } = buildSharePayload(season);
+function shareToFacebook(season, shareUrl) {
+  const { url, text } = buildSharePayload(season, shareUrl);
   if (!url) {
-    return copyShareText(season);
+    return copyShareText(season, shareUrl);
   }
   const params = new URLSearchParams({ u: url, quote: text });
   openPopup(`https://www.facebook.com/sharer/sharer.php?${params}`);
 }
 
-function shareToWhatsApp(season) {
-  const { fullText } = buildSharePayload(season);
+function shareToWhatsApp(season, shareUrl) {
+  const { fullText } = buildSharePayload(season, shareUrl);
   openPopup(`https://wa.me/?text=${encodeURIComponent(fullText)}`);
 }
 
-function shareToLinkedIn(season) {
-  const { url, title } = buildSharePayload(season);
-  if (!url) return copyShareText(season);
+function shareToLinkedIn(season, shareUrl) {
+  const { url, title } = buildSharePayload(season, shareUrl);
+  if (!url) return copyShareText(season, shareUrl);
   const params = new URLSearchParams({ url, mini: 'true', title });
   openPopup(`https://www.linkedin.com/sharing/share-offsite/?${params}`);
 }
 
-async function copyShareText(season) {
-  const { fullText } = buildSharePayload(season);
+async function copyShareText(season, shareUrl) {
+  const { fullText } = buildSharePayload(season, shareUrl);
   try {
     await navigator.clipboard.writeText(fullText);
     return { ok: true, method: 'copy' };
@@ -92,8 +69,8 @@ async function copyShareText(season) {
   }
 }
 
-async function shareScoreNative(season) {
-  const { title, fullText, url } = buildSharePayload(season);
+async function shareScoreNative(season, shareUrl) {
+  const { title, fullText, url } = buildSharePayload(season, shareUrl);
   if (!navigator.share) return null;
   try {
     const payload = url
@@ -107,10 +84,10 @@ async function shareScoreNative(season) {
   }
 }
 
-async function shareScore(season) {
-  const native = await shareScoreNative(season);
+async function shareScore(season, shareUrl) {
+  const native = await shareScoreNative(season, shareUrl);
   if (native) return native;
-  return copyShareText(season);
+  return copyShareText(season, shareUrl);
 }
 
 Object.assign(window, {

@@ -1,6 +1,9 @@
 {
   "version": 2,
   "framework": null,
+  "rewrites": [
+    { "source": "/share/:id", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/data/spinner-index.json",

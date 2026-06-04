@@ -10,6 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
+from shares_store import create_share, get_share
 from stats_store import get_stats, record_win
 
 ROOT = Path(__file__).parent.resolve()
@@ -39,7 +40,7 @@ class AppHandler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self) -> None:
         path = urlparse(self.path).path
-        if path.startswith("/api/stats"):
+        if path.startswith("/api/stats") or path.startswith("/api/share"):
             self._send_cors_preflight()
             return
         self.send_error(404)
@@ -52,10 +53,31 @@ class AppHandler(BaseHTTPRequestHandler):
         if path == "/api/stats/health":
             self._send_json(200, {"ok": True})
             return
+        if path.startswith("/api/share/"):
+            share_id = path[len("/api/share/") :]
+            payload = get_share(share_id)
+            if payload is None:
+                self._send_json(404, {"error": "Share not found"})
+                return
+            self._send_json(200, payload)
+            return
+        if path.startswith("/share/"):
+            self._serve_static("/index.html")
+            return
         self._serve_static(path)
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
+        if path == "/api/share":
+            length = int(self.headers.get("Content-Length") or 0)
+            raw = self.rfile.read(length) if length else b"{}"
+            try:
+                payload = json.loads(raw.decode("utf-8"))
+                created = create_share(payload)
+                self._send_json(201, created)
+            except (KeyError, TypeError, ValueError) as exc:
+                self._send_json(400, {"error": str(exc)})
+            return
         if path != "/api/stats/record":
             self.send_error(404)
             return
@@ -88,6 +110,7 @@ def main() -> None:
     server = ThreadingHTTPServer((HOST, PORT), AppHandler)
     print(f"Serving {ROOT} at http://{HOST}:{PORT}/")
     print("Stats API: GET /api/stats · POST /api/stats/record")
+    print("Share API: POST /api/share · GET /api/share/{id}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
