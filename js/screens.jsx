@@ -177,8 +177,8 @@ function DraftScreen({ onDone, accent, dataError }) {
     setShortlist(null);
     setFetchError(null);
     setPhase('spinning');
-    teamRef.current?.spinTo(pick.teamIndex, 5);
-    yearRef.current?.spinTo(pick.yearIndex, 6);
+    teamRef.current?.spinTo(pick.teamIndex, 4);
+    yearRef.current?.spinTo(pick.yearIndex, 4);
   }
   function onRest() {
     restCount.current += 1;

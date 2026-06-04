@@ -17,7 +17,7 @@ const Wheel = React.forwardRef(function Wheel(
 ) {
   const n = items.length;
   const seg = 360 / n;
-  const DUR = 2500; // ms — must match the CSS transition below
+  const DUR = 1500; // ms — must match the CSS transition below
   const [rotation, setRotation] = React.useState(-seg / 2);
   const [spinning, setSpinning] = React.useState(false);
   const [landed, setLanded] = React.useState(null);
