@@ -431,7 +431,7 @@ function SimScreen({ season, onDone }) {
                 animation: g === live ? 'slideIn .25s ease' : 'none',
               }}
             >
-              {g.us}–{g.them}
+              {g.abbr}
             </div>
             <div style={{ width: 28, textAlign: 'center', fontFamily: '"Saira Condensed",sans-serif', fontWeight: 800, fontSize: 16, color: g.win ? 'var(--accent)' : '#fb7185' }}>{g.win ? 'W' : 'L'}</div>
           </div>
@@ -528,7 +528,7 @@ function GlobalStatsPanel({ season, globalStats }) {
 }
 
 function ResultScreen({ season, onRestart }) {
-  const { wins, losses, pf, pa, diff, perfect } = season;
+  const { wins, losses, perfect } = season;
   const [globalStats, setGlobalStats] = React.useState(null);
 
   React.useEffect(() => {
@@ -555,20 +555,12 @@ function ResultScreen({ season, onRestart }) {
         <div style={{ fontFamily: '"Saira Condensed",sans-serif', fontWeight: 800, fontSize: 112, lineHeight: 0.85, marginTop: 5, color: perfect ? 'var(--accent)' : 'var(--txt)', textShadow: perfect ? '0 0 40px var(--accent-glow)' : 'none' }}>{wins}<span style={{ color: 'var(--muted)', fontWeight: 700 }}>–</span>{losses}</div>
         <div style={{ fontFamily: '"Saira Condensed",sans-serif', fontWeight: 600, fontSize: 19, marginTop: 7, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--txt)' }}>{perfect ? '🏆 17–0 · Immortal' : (season.message || verdict(wins))}</div>
       </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-        {[['PF', pf], ['PA', pa], ['DIFF', (diff >= 0 ? '+' : '') + diff]].map(([l, v]) => (
-          <div key={l} style={{ ...sx.statCard, flex: 1 }}>
-            <Mono>{l}</Mono>
-            <div style={{ fontFamily: '"Saira Condensed",sans-serif', fontWeight: 800, fontSize: 30, lineHeight: 1, color: l === 'DIFF' ? (diff >= 0 ? 'var(--accent)' : '#fb7185') : 'var(--txt)', marginTop: 3 }}>{v}</div>
-          </div>
-        ))}
-      </div>
       <Mono style={{ marginTop: 16 }}>Game Log</Mono>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6, marginTop: 8 }}>
         {season.games.map(g => (
           <div key={g.wk} style={{ aspectRatio: '1', borderRadius: 9, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: g.win ? 'rgba(255,122,61,0.14)' : 'rgba(251,113,133,0.12)', border: `1px solid ${g.win ? 'rgba(255,122,61,0.45)' : 'rgba(251,113,133,0.4)'}` }}>
             <div style={{ fontFamily: '"Saira Condensed",sans-serif', fontWeight: 800, fontSize: 18, color: g.win ? 'var(--accent)' : '#fb7185', lineHeight: 1 }}>{g.win ? 'W' : 'L'}</div>
-            <div style={{ fontFamily: '"IBM Plex Mono",monospace', fontSize: 9, color: 'var(--muted)', marginTop: 2 }}>{g.us}-{g.them}</div>
+            <div style={{ fontFamily: '"IBM Plex Mono",monospace', fontSize: 9, color: 'var(--muted)', marginTop: 2 }}>{g.abbr}</div>
           </div>
         ))}
       </div>

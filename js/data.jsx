@@ -95,18 +95,6 @@ function percentile(rtg) {
   return Math.round(Math.max(1, Math.min(99, (1 / (1 + Math.exp(-1.7 * z))) * 100)));
 }
 
-function cosmeticScores(win, wp) {
-  const base = 20 + Math.round((wp || 50) * 0.12);
-  if (win) {
-    const them = base + Math.floor(Math.random() * 8);
-    const us = them + 3 + Math.floor(Math.random() * 11);
-    return { us, them };
-  }
-  const us = base + Math.floor(Math.random() * 8);
-  const them = us + 3 + Math.floor(Math.random() * 10);
-  return { us, them };
-}
-
 function simSeason(squad, opts = {}) {
   const _ = opts;
   const str = rosterStrengthScore(squad);
@@ -115,18 +103,13 @@ function simSeason(squad, opts = {}) {
   const avgOvr = window.SeasonSim.rosterAverageOvr(squad);
   const games = SCHEDULE.map((opp, i) => {
     const wk = sim.games[i] || { win: false, winProb: 50, tierLabel: 'standard week' };
-    const { us, them } = cosmeticScores(wk.win, wk.winProb);
     return {
       ...opp,
-      us,
-      them,
       win: wk.win,
       wp: wk.winProb / 100,
       tierLabel: wk.tierLabel,
     };
   });
-  const pf = games.reduce((s, g) => s + g.us, 0);
-  const pa = games.reduce((s, g) => s + g.them, 0);
   const message = window.SeasonSim.outcomeMessage(sim.wins, sim.losses);
   const strengthPercentile = window.SeasonSim.rosterStrengthPercentile(str);
   const recordId =
@@ -134,14 +117,12 @@ function simSeason(squad, opts = {}) {
       ? crypto.randomUUID()
       : `season-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   return {
+    squad,
     rt,
     games,
     recordId,
     wins: sim.wins,
     losses: sim.losses,
-    pf,
-    pa,
-    diff: pf - pa,
     perfect: sim.wins === 17,
     rosterStrength: str,
     strengthNorm: sim.strengthNorm,

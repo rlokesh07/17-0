@@ -5,8 +5,22 @@ function gameUrl() {
   return window.location.href.split('#')[0].split('?')[0];
 }
 
+function formatSquadForShare(squad) {
+  if (!squad || !SLOTS) return [];
+  return SLOTS.map((slot) => {
+    const p = squad[slot.key];
+    if (!p) return null;
+    const t = p.fromTeam;
+    const year =
+      p.fromYear != null ? `'${String(p.fromYear).slice(-2)}` : '';
+    const origin = t ? `${t.abbr.toUpperCase()}${year ? ` ${year}` : ''}` : '';
+    const meta = [origin, p.pos].filter(Boolean).join(' · ');
+    return `${slot.label} ${p.name}${meta ? ` · ${meta}` : ''} · ${p.ovr}`;
+  }).filter(Boolean);
+}
+
 function buildSharePayload(season) {
-  const { wins, losses, pf, pa, diff, perfect } = season;
+  const { wins, losses, perfect } = season;
   const record = `${wins}–${losses}`;
   const headline = perfect
     ? '🏆 17–0 — Perfect season!'
@@ -15,8 +29,12 @@ function buildSharePayload(season) {
   const lines = [
     `Can you go 17-0? I finished ${record}.`,
     headline,
-    `PF ${pf} · PA ${pa} · ${diff >= 0 ? '+' : ''}${diff}`,
   ];
+
+  const roster = formatSquadForShare(season.squad);
+  if (roster.length) {
+    lines.push('', 'My squad:', ...roster);
+  }
 
   const url = gameUrl();
   const text = lines.join('\n');
